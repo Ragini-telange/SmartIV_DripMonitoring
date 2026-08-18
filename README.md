@@ -37,7 +37,7 @@ This repository contains the complete **Phase 3 Full-Stack Application** featuri
 
 | Nurse Patient Monitoring | Patient Detail & Live Chart |
 | :---: | :---: |
-| ![Nurse Dashboard](screenshots/nurse_dashboard.png) | ![Patient Detail](screenshots/patient_detail.png) |
+| ![Login_Authincation](screenshots/nurse_dashboard.png) | ![Patient Detail](screenshots/patient_detail.png) |
 
 | Export Reports (CSV & PDF) |
 | :---: |
