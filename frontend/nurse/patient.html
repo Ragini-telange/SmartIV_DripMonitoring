@@ -1,0 +1,282 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8"/>
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>MediFlow — Patient Detail</title>
+  <link rel="stylesheet" href="../css/main.css"/>
+  <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css"/>
+  <script src="https://cdn.jsdelivr.net/npm/chart.js"></script>
+  <style>
+    .detail-header{background:var(--card);border-radius:var(--radius);padding:24px;box-shadow:var(--shadow);margin-bottom:20px;display:flex;align-items:center;justify-content:space-between;flex-wrap:wrap;gap:14px;}
+    .patient-info-big h2{font-size:1.4rem;font-weight:700;}
+    .patient-info-big p{color:var(--muted);font-size:.88rem;margin-top:3px;}
+    .status-big{padding:8px 18px;border-radius:20px;font-size:.85rem;font-weight:700;text-transform:uppercase;}
+
+    /* 3 metric boxes at top */
+    .metric-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:20px;}
+    .metric-card{background:var(--card);border-radius:var(--radius);padding:22px;box-shadow:var(--shadow);text-align:center;}
+    .metric-card .mc-label{font-size:.78rem;color:var(--muted);font-weight:600;text-transform:uppercase;margin-bottom:8px;}
+    .metric-card .mc-value{font-family:'Space Grotesk',sans-serif;font-size:2rem;font-weight:700;color:var(--text);}
+    .metric-card .mc-unit{font-size:.78rem;color:var(--muted);margin-top:4px;}
+    .metric-card .mc-value.running{color:var(--green);}
+    .metric-card .mc-value.stopped{color:var(--red);}
+    .metric-card .mc-value.blood-yes{color:var(--red);}
+    .metric-card .mc-value.blood-no{color:var(--green);}
+
+    .chart-section{background:var(--card);border-radius:var(--radius);padding:24px;box-shadow:var(--shadow);margin-bottom:20px;}
+    .chart-section h3{font-size:.95rem;font-weight:700;margin-bottom:16px;display:flex;align-items:center;gap:8px;}
+    .event-log-card{background:var(--card);border-radius:var(--radius);padding:24px;box-shadow:var(--shadow);margin-bottom:20px;}
+    .event-log-card h3{font-size:.95rem;font-weight:700;margin-bottom:14px;}
+    .event-item{display:flex;align-items:flex-start;gap:10px;padding:9px 12px;border-radius:8px;margin-bottom:6px;background:var(--surface);font-size:.82rem;}
+    .event-time{color:var(--muted);min-width:80px;font-size:.75rem;margin-top:1px;}
+    .event-msg{color:var(--text);}
+    .emergency-wrap{text-align:center;margin-top:8px;}
+    .emergency-btn{padding:14px 36px;background:linear-gradient(135deg,#dc2626,#b91c1c);color:#fff;border:none;border-radius:10px;font-family:'Space Grotesk',sans-serif;font-size:1rem;font-weight:700;cursor:pointer;box-shadow:0 4px 16px rgba(220,38,38,.4);transition:all .2s;display:inline-flex;align-items:center;gap:10px;}
+    .emergency-btn:hover{transform:translateY(-2px);box-shadow:0 6px 24px rgba(220,38,38,.5);}
+    @media(max-width:700px){.metric-row{grid-template-columns:1fr 1fr;}.metric-card:last-child{grid-column:1/-1;}}
+  </style>
+</head>
+<body>
+<div class="page-layout">
+  <aside class="sidebar" id="sidebar">
+    <div class="sidebar-logo"><div class="logo-icon"><i class="fa-solid fa-droplet"></i></div><span class="logo-text">MediFlow</span></div>
+    <nav class="sidebar-nav">
+      <button class="nav-item" onclick="location.href='dashboard.html'"><i class="fa-solid fa-arrow-left"></i> Back to Dashboard</button>
+    </nav>
+    <div class="sidebar-bottom">
+      <button class="btn-theme" onclick="toggleDarkMode()"><i class="fa-solid fa-moon" id="themeIcon"></i> Dark Mode</button>
+      <div class="user-pill"><div class="user-avatar" id="sidebarAvatar">N</div><div><div class="user-name" id="sidebarName">Nurse</div><div class="user-role" id="sidebarRole">Nurse</div></div></div>
+      <button class="btn-logout" onclick="logout()"><i class="fa-solid fa-right-from-bracket"></i> Logout</button>
+    </div>
+  </aside>
+
+  <main class="main">
+    <header class="topbar">
+      <button class="hamburger" onclick="toggleSidebar()"><i class="fa-solid fa-bars"></i></button>
+      <div class="topbar-title"><h1>Patient Detail</h1><p>Live monitoring</p></div>
+      <div class="topbar-right">
+        <span style="font-size:.78rem;color:var(--green);background:rgba(34,197,94,.08);padding:6px 11px;border-radius:20px;border:1px solid rgba(34,197,94,.2);display:flex;align-items:center;gap:6px;">
+          <span class="live-dot"></span> LIVE
+        </span>
+      </div>
+    </header>
+
+    <div class="page-body">
+      <!-- Patient info header -->
+      <div class="detail-header">
+        <div class="patient-info-big">
+          <h2 id="patientName">Loading...</h2>
+          <p id="patientMeta">Bed — | Ward — | Age —</p>
+        </div>
+        <span class="status-big badge badge-normal" id="statusBadge">Normal</span>
+      </div>
+
+      <!-- 3 live sensor metrics -->
+      <div class="metric-row">
+        <div class="metric-card">
+          <div class="mc-label"><i class="fa-solid fa-droplet" style="color:var(--blue)"></i> Drip Rate</div>
+          <div class="mc-value" id="liveDripRate">—</div>
+          <div class="mc-unit">drops per minute</div>
+        </div>
+        <div class="metric-card">
+          <div class="mc-label"><i class="fa-solid fa-circle-play" style="color:var(--green)"></i> Flow Status</div>
+          <div class="mc-value" id="liveFlowStatus">—</div>
+          <div class="mc-unit">IV line status</div>
+        </div>
+        <div class="metric-card">
+          <div class="mc-label"><i class="fa-solid fa-heart-pulse" style="color:var(--red)"></i> Blood Backflow</div>
+          <div class="mc-value" id="liveBlood">—</div>
+          <div class="mc-unit">color sensor</div>
+        </div>
+      </div>
+
+      <!-- Drip Rate Chart -->
+      <div class="chart-section">
+        <h3><i class="fa-solid fa-chart-line" style="color:var(--blue)"></i> Drip Rate History (drops/min)</h3>
+        <canvas id="dripChart" height="90"></canvas>
+      </div>
+
+      <!-- Alert event log -->
+      <div class="event-log-card">
+        <h3><i class="fa-solid fa-clock-rotate-left" style="color:var(--yellow)"></i> Alert Event Log</h3>
+        <div id="eventLog"><p style="color:var(--muted);font-size:.85rem">No events yet.</p></div>
+      </div>
+
+      <!-- Emergency button -->
+      <div class="emergency-wrap">
+        <button class="emergency-btn" onclick="callNurse()">
+          <i class="fa-solid fa-bell"></i> CALL NURSE — Emergency
+        </button>
+      </div>
+    </div>
+  </main>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast">
+  <div class="toast-icon"><i class="fa-solid fa-triangle-exclamation"></i></div>
+  <div class="toast-body"><strong id="toastTitle">Alert</strong><p id="toastMsg"></p></div>
+  <button class="toast-close" onclick="closeToast()"><i class="fa-solid fa-xmark"></i></button>
+</div>
+
+<script src="../js/api.js"></script>
+<script src="../js/auth.js"></script>
+<script src="../js/thingspeak.js"></script>
+<script>
+  requireAuth('nurse');
+  initDarkMode();
+  fillSidebarUser();
+
+  // Get patient ID from URL
+  const urlParams  = new URLSearchParams(window.location.search);
+  const patientId  = urlParams.get('id');
+  if (!patientId) location.href = 'dashboard.html';
+
+  let patient     = null;
+  let dripChart   = null;
+  let chartLabels = [];
+  let chartData   = [];
+  let updateTimer;
+
+  // ── Load patient info ──────────────────────────
+  async function loadPatient() {
+    const res = await apiGetPatient(patientId);
+    if (!res.success) { alert('Patient not found.'); location.href = 'dashboard.html'; return; }
+    patient = res.patient;
+
+    document.getElementById('patientName').textContent = patient.name;
+    document.getElementById('patientMeta').textContent =
+      `Bed ${patient.bed_number} | ${patient.ward || '—'} | Age ${patient.age || '—'}`;
+
+    // Build chart
+    initChart();
+
+    // Load history for chart
+    const hRes = await apiGetReadings(patientId);
+    if (hRes.success && hRes.readings.length) {
+      hRes.readings.forEach(r => {
+        const t = new Date(r.recorded_at).toLocaleTimeString();
+        chartLabels.push(t);
+        chartData.push(r.drip_rate);
+      });
+      updateChart();
+    }
+
+    // Load alert log
+    loadAlertLog();
+
+    // Start live updates
+    await tick();
+    updateTimer = setInterval(tick, 3000);
+  }
+
+  // ── Live tick ──────────────────────────────────
+  async function tick() {
+    if (!patient) return;
+    const r = await fetchThingSpeak(
+      patient.thingspeak_channel_id,
+      patient.thingspeak_read_key,
+      String(patient.id)
+    );
+
+    // Update live metrics
+    document.getElementById('liveDripRate').textContent = r.dripRate.toFixed(1);
+    document.getElementById('liveDripRate').className = 'mc-value';
+
+    const flowEl = document.getElementById('liveFlowStatus');
+    flowEl.textContent = r.flowStatus;
+    flowEl.className = `mc-value ${r.flowStatus.toLowerCase()}`;
+
+    const bloodEl = document.getElementById('liveBlood');
+    bloodEl.textContent = r.bloodDetected ? 'DETECTED!' : 'Normal';
+    bloodEl.className = `mc-value ${r.bloodDetected ? 'blood-yes' : 'blood-no'}`;
+
+    // Status badge
+    const status = getAlertStatus(r);
+    const badgeEl = document.getElementById('statusBadge');
+    badgeEl.textContent = status.toUpperCase();
+    badgeEl.className = `status-big badge badge-${status}`;
+
+    // Add to chart
+    const now = new Date().toLocaleTimeString();
+    chartLabels.push(now);
+    chartData.push(r.dripRate);
+    if (chartLabels.length > 20) { chartLabels.shift(); chartData.shift(); }
+    updateChart();
+  }
+
+  // ── Chart.js ───────────────────────────────────
+  function initChart() {
+    const isDark = document.documentElement.getAttribute('data-theme') === 'dark';
+    const grid   = isDark ? 'rgba(255,255,255,.07)' : 'rgba(0,0,0,.05)';
+    const label  = isDark ? '#94a3b8' : '#64748b';
+
+    const ctx = document.getElementById('dripChart').getContext('2d');
+    dripChart = new Chart(ctx, {
+      type: 'line',
+      data: {
+        labels:   chartLabels,
+        datasets: [{
+          label:           'Drip Rate (dpm)',
+          data:            chartData,
+          borderColor:     '#1d6ef5',
+          backgroundColor: 'rgba(29,110,245,.08)',
+          borderWidth:     2.5,
+          fill:            true,
+          tension:         0.4,
+          pointRadius:     3,
+          pointBackgroundColor: '#1d6ef5'
+        }]
+      },
+      options: {
+        responsive: true,
+        animation:  { duration: 300 },
+        plugins:    { legend: { display: false } },
+        scales: {
+          x: { ticks:{ color:label, font:{size:10}, maxTicksLimit:8 }, grid:{ color:grid } },
+          y: { min:0, max:80, ticks:{ color:label, font:{size:10} }, grid:{ color:grid } }
+        }
+      }
+    });
+  }
+  function updateChart() {
+    if (!dripChart) return;
+    dripChart.data.labels           = [...chartLabels];
+    dripChart.data.datasets[0].data = [...chartData];
+    dripChart.update('none');
+  }
+
+  // ── Alert event log ────────────────────────────
+  async function loadAlertLog() {
+    const res = await apiGetPatientAlerts(patientId);
+    const el  = document.getElementById('eventLog');
+    if (!res.success || !res.alerts.length) {
+      el.innerHTML = `<p style="color:var(--muted);font-size:.85rem">No alerts recorded yet.</p>`;
+      return;
+    }
+    el.innerHTML = res.alerts.map(a => `
+      <div class="event-item">
+        <span class="event-time">${new Date(a.created_at).toLocaleTimeString()}</span>
+        <span class="event-msg">${a.message}</span>
+      </div>
+    `).join('');
+  }
+
+  // ── Emergency button ───────────────────────────
+  function callNurse() {
+    playBeep(880, .8);
+    setTimeout(() => playBeep(660, .6), 300);
+    showToast('🚨 EMERGENCY', 'Nurse has been called to the bedside!', 'critical');
+    apiSaveAlert({
+      patient_id: patientId,
+      alert_type: 'emergency',
+      message:    `Emergency call from bedside — ${patient?.name}`,
+      drip_rate:  null
+    });
+  }
+
+  loadPatient();
+</script>
+</body>
+</html>
