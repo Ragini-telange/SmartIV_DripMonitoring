@@ -195,5 +195,5 @@ http://localhost:3000
 ## 📝 License & Credits
 
 Developed as part of the **Smart IV Drip & Telemetry Monitoring System** project.
-- **Repository**: [https://github.com/Ragini-telange/-Minor_project_SmartIVDripMonitoring.git](https://github.com/Ragini-telange/-Minor_project_SmartIVDripMonitoring.git)
+- **Repository**: [https://github.com/Ragini-telange/-Minor_project_SmartIVDripMonitoring.git](https://github.com/Ragini-telange/SmartIV_DripMonitoring)
 - **Author**: Ragini Telange
